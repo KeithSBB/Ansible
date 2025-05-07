@@ -1,0 +1,53 @@
+- name: Generate a signed key pair on a remote server
+  hosts: ca_server
+  become: yes
+  vars:
+    key_path: /etc/pki/lan-ca/private/server-key.pem
+    cert_path: /etc/pki/lan-ca/certs/server-cert.pem
+    csr_path: /etc/pki/lan-ca/certs/server-csr.pem
+    ca_key_path: /etc/pki/lan-ca/private/ca-key.pem
+    ca_cert_path: /etc/pki/lan-ca/certs/ca-cert.pem
+    common_name: "{{ inventory_hostname }}"
+    key_size: 4096
+    cert_days: 365
+  tasks:
+    - name: Ensure CA key and certificate exist
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      loop:
+        - "{{ ca_key_path }}"
+        - "{{ ca_cert_path }}"
+      register: ca_files
+      failed_when: not ca_files.results[0].stat.exists or not ca_files.results[1].stat.exists
+
+    - name: Generate private key
+      community.crypto.openssl_privatekey:
+        path: "{{ key_path }}"
+        size: "{{ key_size }}"
+        type: RSA
+        mode: '0400'
+      register: private_key
+
+    - name: Generate CSR
+      community.crypto.openssl_csr:
+        path: "{{ csr_path }}"
+        privatekey_path: "{{ key_path }}"
+        common_name: "{{ common_name }}"
+        country_name: US
+        state_or_province_name: YourState
+        locality_name: YourCity
+        organization_name: Home LAN
+        mode: '0644'
+      when: private_key.changed
+
+    - name: Generate signed certificate
+      community.crypto.x509_certificate:
+        path: "{{ cert_path }}"
+        csr_path: "{{ csr_path }}"
+        privatekey_path: "{{ key_path }}"
+        provider: ownca
+        ownca_path: "{{ ca_cert_path }}"
+        ownca_privatekey_path: "{{ ca_key_path }}"
+        ownca_not_after: "+{{ cert_days }}d"
+        mode: '0644'
+      when: private_key.changed
