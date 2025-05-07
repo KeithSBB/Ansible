@@ -1,0 +1,46 @@
+---
+- name: Set up Ansible user and SSH key
+  hosts: all
+  become: true  # Run tasks with sudo privileges
+  vars:
+    ansible_user: ansible
+    ansible_user_password: "{{ 'your_secure_password' | password_hash('sha512') }}"
+    ssh_key_source: /path/to/your/public/key.pub  # Path to the public key on the control node
+  tasks:
+    - name: Create Ansible user
+      user:
+        name: "{{ ansible_user }}"
+        password: "{{ ansible_user_password }}"
+        shell: /bin/bash
+        state: present
+
+    - name: Add Ansible user to sudoers
+      lineinfile:
+        path: /etc/sudoers.d/{{ ansible_user }}
+        line: "{{ ansible_user }} ALL=(ALL) NOPASSWD:ALL"
+        create: yes
+        mode: '0440'
+        validate: 'visudo -cf %s'
+
+    - name: Create .ssh directory for Ansible user
+      file:
+        path: "/home/{{ ansible_user }}/.ssh"
+        state: directory
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: '0700'
+
+    - name: Copy SSH public key to Ansible user
+      copy:
+        src: "{{ ssh_key_source }}"
+        dest: "/home/{{ ansible_user }}/.ssh/authorized_keys"
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: '0600'
+
+    - name: Ensure SSH key permissions are correct
+      file:
+        path: "/home/{{ ansible_user }}/.ssh/authorized_keys"
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: '0600'
