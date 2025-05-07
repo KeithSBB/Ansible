@@ -1,0 +1,51 @@
+---
+- name: Set up LAN CA with OpenSSL using community.crypto
+  hosts: ca_server
+  become: yes
+  collections:
+    - community.crypto
+  tasks:
+    - name: Install OpenSSL
+      dnf:
+        name: openssl
+        state: present
+    - name: Create CA directory structure
+      file:
+        path: "{{ item }}"
+        state: directory
+        mode: "{{ '0700' if 'private' in item else '0755' }}"
+      loop:
+        - /etc/pki/lan-ca
+        - /etc/pki/lan-ca/certs
+        - /etc/pki/lan-ca/private
+        - /etc/pki/lan-ca/crl
+        - /etc/pki/lan-ca/newcerts
+    - name: Create index and serial files
+      copy:
+        content: "{{ item.content }}"
+        dest: "{{ item.dest }}"
+        mode: '0644'
+      loop:
+        - { dest: /etc/pki/lan-ca/index.txt, content: '' }
+        - { dest: /etc/pki/lan-ca/serial, content: '1000\n' }
+    - name: Generate CA private key
+      openssl_privatekey:
+        path: /etc/pki/lan-ca/private/ca-key.pem
+        size: 4096
+        mode: '0400'
+        state: present
+    - name: Generate CA certificate
+      x509_certificate:
+        path: /etc/pki/lan-ca/certs/ca-cert.pem
+        privatekey_path: /etc/pki/lan-ca/private/ca-key.pem
+        provider: selfsigned
+        selfsigned_not_after: "+3650d"
+        selfsigned_digest: sha256
+        subject:
+          C: US
+          ST: California
+          L: SantaBarbara
+          O: Home LAN
+          CN: Smith LAN CA
+        mode: '0644'
+        state: present
