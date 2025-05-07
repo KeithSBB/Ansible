@@ -1,0 +1,16 @@
+- name: Distribute CA certificate to clients and servers
+  hosts: clients,servers
+  become: yes
+  vars_files:
+    - vault.yml
+  tasks:
+    - name: Copy CA certificate to target machines
+      copy:
+        src: /etc/pki/lan-ca/certs/ca-cert.pem
+        dest: /etc/pki/ca-trust/source/anchors/lan-ca-cert.pem
+        owner: root
+        group: root
+        mode: '0644'
+    - name: Update CA trust store
+      command: update-ca-trust
+      when: ansible_os_family == 'RedHat'
