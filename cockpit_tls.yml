@@ -1,0 +1,242 @@
+---
+- name: Generate and sign Cockpit server certificates
+  hosts: cockpit_servers
+  become: yes
+  collections:
+    - community.crypto
+  vars:
+    ca_server: "{{ groups['ca_server'][0] }}"  # CA server (CertAuthority)
+    ca_server_ip: "192.168.50.176"  # IP address of CertAuthority
+    cert_dir: /etc/cockpit/ws-certs.d
+    cert_name: cockpit
+    tmp_dir: /var/tmp  # Use /var/tmp for temporary files on Cockpit and CA servers
+    ca_user: keith     # Ansible user on ca_server (CertAuthority)
+    control_tmp_dir: /home/keith/tmp  # Temporary directory on CertAuthority
+  tasks:
+    - name: Ensure OpenSSL and python3-cryptography are installed
+      package:
+        name:
+          - openssl
+          - python3-cryptography
+        state: present
+      # Runs on each Cockpit server (e.g., raspberrypi)
+
+    - name: Ensure /etc/cockpit is accessible
+      file:
+        path: /etc/cockpit
+        state: directory
+        mode: '0755'
+        owner: root
+        group: root
+      # Ensures parent directory is accessible
+
+    - name: Create Cockpit certificate directory
+      file:
+        path: "{{ cert_dir }}"
+        state: directory
+        mode: '0755'
+        owner: root
+        group: root
+      # Runs on each Cockpit server, ensures root ownership
+
+    - name: Ensure /var/tmp is writable on Cockpit server
+      file:
+        path: "{{ tmp_dir }}"
+        state: directory
+        mode: '1777'  # Sticky bit, world-writable
+      # Ensures /var/tmp is accessible for CSR creation
+
+    - name: Ensure /var/tmp is writable on CA server
+      file:
+        path: "{{ tmp_dir }}"
+        state: directory
+        mode: '1777'  # Sticky bit, world-writable
+      delegate_to: "{{ ca_server }}"
+      become: yes
+      # Ensures /var/tmp is accessible on CertAuthority
+
+    - name: Ensure temporary directory exists on control node
+      file:
+        path: "{{ control_tmp_dir }}"
+        state: directory
+        mode: '0700'
+        owner: "{{ ca_user }}"
+        group: "{{ ca_user }}"
+      delegate_to: localhost
+      # Creates /home/keith/tmp on CertAuthority
+
+    - name: Generate SSH key for Cockpit user
+      user:
+        name: "{{ ansible_user }}"
+        generate_ssh_key: yes
+        ssh_key_bits: 4096
+        ssh_key_type: rsa
+        ssh_key_file: .ssh/id_rsa
+        state: present
+      # Generates SSH key for mycroft on raspberrypi
+
+    - name: Fetch Cockpit user's public key
+      slurp:
+        src: "/home/{{ ansible_user }}/.ssh/id_rsa.pub"
+      register: cockpit_public_key
+      # Reads mycroft's public key
+
+    - name: Ensure CA user home directory has correct permissions
+      file:
+        path: "/home/{{ ca_user }}"
+        state: directory
+        mode: '0700'
+        owner: "{{ ca_user }}"
+        group: "{{ ca_user }}"
+      delegate_to: "{{ ca_server }}"
+      become: yes
+      # Ensures ~keith has strict permissions on CertAuthority
+
+    - name: Ensure .ssh directory exists on CA server
+      file:
+        path: "/home/{{ ca_user }}/.ssh"
+        state: directory
+        mode: '0700'
+        owner: "{{ ca_user }}"
+        group: "{{ ca_user }}"
+      delegate_to: "{{ ca_server }}"
+      become: yes
+      # Creates ~keith/.ssh on CertAuthority
+
+    - name: Copy Cockpit user's public key to CA server
+      copy:
+        content: "{{ cockpit_public_key['content'] | b64decode }}"
+        dest: "/home/{{ ca_user }}/.ssh/authorized_keys"
+        mode: '0600'
+        owner: "{{ ca_user }}"
+        group: "{{ ca_user }}"
+      delegate_to: "{{ ca_server }}"
+      become: yes
+      # Adds mycroft's public key to keith's authorized_keys on CertAuthority
+
+    - name: Generate private key for Cockpit server
+      openssl_privatekey:
+        path: "{{ cert_dir }}/{{ cert_name }}.key"
+        size: 2048
+        mode: '0400'
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        state: present
+      # Runs on each Cockpit server (e.g., raspberrypi with ansible_user=mycroft)
+
+    - name: Generate CSR for Cockpit server
+      openssl_csr:
+        path: "{{ tmp_dir }}/{{ cert_name }}-{{ inventory_hostname }}.csr"
+        privatekey_path: "{{ cert_dir }}/{{ cert_name }}.key"
+        common_name: "{{ inventory_hostname }}"
+        subject:
+          C: US
+          ST: California
+          L: SantaBarbara
+          O: Home LAN
+        mode: '0600'
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        state: present
+      # Runs on each Cockpit server (e.g., raspberrypi with ansible_user=mycroft)
+
+    - name: Remove existing CSR on control node
+      file:
+        path: "{{ control_tmp_dir }}/{{ cert_name }}-{{ inventory_hostname }}.csr"
+        state: absent
+      delegate_to: localhost
+      # Ensures no existing file causes permission issues
+
+    - name: Fetch CSR to control node
+      fetch:
+        src: "{{ tmp_dir }}/{{ cert_name }}-{{ inventory_hostname }}.csr"
+        dest: "{{ control_tmp_dir }}/{{ cert_name }}-{{ inventory_hostname }}.csr"
+        flat: yes
+      # Fetches CSR from Cockpit server to /home/keith/tmp on CertAuthority
+
+    - name: Copy CSR to CA server
+      copy:
+        src: "{{ control_tmp_dir }}/{{ cert_name }}-{{ inventory_hostname }}.csr"
+        dest: "{{ tmp_dir }}/{{ cert_name }}-{{ inventory_hostname }}.csr"
+        mode: '0600'
+        owner: "{{ ca_user }}"
+        group: "{{ ca_user }}"
+      delegate_to: "{{ ca_server }}"
+      become: yes
+      # Copies CSR to /var/tmp on CertAuthority, owned by keith
+
+    - name: Clean up CSR on control node
+      file:
+        path: "{{ control_tmp_dir }}/{{ cert_name }}-{{ inventory_hostname }}.csr"
+        state: absent
+      delegate_to: localhost
+      # Removes temporary CSR from control node
+
+    - name: Sign CSR with CA on CA server
+      x509_certificate:
+        path: "{{ tmp_dir }}/{{ cert_name }}-{{ inventory_hostname }}.crt"
+        csr_path: "{{ tmp_dir }}/{{ cert_name }}-{{ inventory_hostname }}.csr"
+        ownca_privatekey_path: /etc/pki/lan-ca/private/ca-key.pem
+        ownca_path: /etc/pki/lan-ca/certs/ca-cert.pem
+        provider: ownca
+        ownca_not_after: "+365d"  # Certificate valid for 1 year
+        ownca_digest: sha256
+        mode: '0644'
+        owner: "{{ ca_user }}"
+        group: "{{ ca_user }}"
+        state: present
+      delegate_to: "{{ ca_server }}"
+      become: yes
+      # Runs on CertAuthority, signs CSR, owned by keith
+
+    - name: Remove existing certificate on Cockpit server
+      file:
+        path: "{{ cert_dir }}/{{ cert_name }}.crt"
+        state: absent
+      # Ensures no existing certificate causes permission issues
+
+    - name: Copy signed certificate to Cockpit server
+      copy:
+        src: "{{ tmp_dir }}/{{ cert_name }}-{{ inventory_hostname }}.crt"
+        dest: "{{ cert_dir }}/{{ cert_name }}.crt"
+        mode: '0644'
+        owner: root
+        group: root
+      become: yes
+      # Copies certificate from CertAuthority to raspberrypi
+
+    - name: Clean up CSR and certificate on CA server
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ tmp_dir }}/{{ cert_name }}-{{ inventory_hostname }}.csr"
+        - "{{ tmp_dir }}/{{ cert_name }}-{{ inventory_hostname }}.crt"
+      delegate_to: "{{ ca_server }}"
+      become: yes
+      # Cleans up temporary files on CertAuthority
+
+    - name: Clean up CSR on Cockpit server
+      file:
+        path: "{{ tmp_dir }}/{{ cert_name }}-{{ inventory_hostname }}.csr"
+        state: absent
+      # Runs on each Cockpit server
+
+    - name: Set ownership and permissions for Cockpit service
+      file:
+        path: "{{ cert_dir }}/{{ item }}"
+        owner: cockpit-ws
+        group: cockpit-ws
+        mode: "{{ '0400' if 'key' in item else '0644' }}"
+      loop:
+        - "{{ cert_name }}.key"
+        - "{{ cert_name }}.crt"
+      notify: Restart Cockpit
+      # Runs on each Cockpit server, sets ownership for Cockpit service
+
+  handlers:
+    - name: Restart Cockpit
+      service:
+        name: cockpit
+        state: restarted
+      # Runs on each Cockpit server
