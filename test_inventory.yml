@@ -1,0 +1,27 @@
+---
+- name: Test node accessibility, SSH connectivity, and sudo privileges
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Check if node is reachable
+      ansible.builtin.ping:
+      register: ping_result
+      ignore_errors: true
+
+    - name: Verify SSH connectivity with ansible user
+      ansible.builtin.command: whoami
+      register: whoami_result
+      ignore_errors: true
+
+    - name: Test sudo privileges for ansible user
+      ansible.builtin.command: sudo -n whoami
+      register: sudo_result
+      ignore_errors: true
+
+    - name: Display node status
+      ansible.builtin.debug:
+        msg: |
+          Node: {{ inventory_hostname }}
+          Reachable: {{ 'Yes' if ping_result.ping is defined and ping_result.ping == 'pong' else 'No' }}
+          SSH with ansible user: {{ 'Yes' if whoami_result.rc is defined and whoami_result.rc == 0 and whoami_result.stdout == 'ansible' else 'No' }}
+          Sudo privileges: {{ 'Yes' if sudo_result.rc is defined and sudo_result.rc == 0 and sudo_result.stdout == 'root' else 'No' }}
