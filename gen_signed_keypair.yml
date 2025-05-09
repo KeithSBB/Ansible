@@ -2,9 +2,9 @@
   hosts: ca_server
   become: yes
   vars:
-    key_path: /etc/pki/lan-ca/private/server-key.pem
-    cert_path: /etc/pki/lan-ca/certs/server-cert.pem
-    csr_path: /etc/pki/lan-ca/certs/server-csr.pem
+    key_path: /etc/pki/tls/private/server-key.pem
+    cert_path: /etc/pki/tls/certs/server-cert.pem
+    csr_path: /etc/pki/tls/csrs/server-csr.pem
     ca_key_path: /etc/pki/lan-ca/private/ca-key.pem
     ca_cert_path: /etc/pki/lan-ca/certs/ca-cert.pem
     common_name: "{{ inventory_hostname }}"
