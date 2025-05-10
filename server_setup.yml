@@ -1,6 +1,6 @@
 ---
 - name: Generate and sign server certificates with Cockpit compatibility
-  hosts: all  # Targets all servers in the inventory
+  hosts: ca_server  # Targets all servers in the inventory
   become: yes
   collections:
     - community.crypto
