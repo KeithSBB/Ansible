@@ -1,4 +1,4 @@
----
+# This file is not used sice ansible was setup manually on each node
 - name: Set up Ansible user and SSH key
   hosts: all
   become: true  # Run tasks with sudo privileges
