@@ -7,8 +7,8 @@
   vars:
     ca_server: "{{ groups['ca_server'][0] }}"  # CA server (CertAuthority)
     ca_server_ip: "192.168.50.176"  # IP address of CertAuthority
-    key_path: /etc/pki/tls/private/server-key.pem
-    cert_path: /etc/pki/tls/certs/server-cert.pem
+    key_path: /etc/pki/tls/private/server.key
+    cert_path: /etc/pki/tls/certs/server.crt
     csr_path: /etc/pki/tls/csrs/server-csr.pem
     cockpit_cert_dir: /etc/cockpit/ws-certs.d
     tmp_dir: /var/tmp  # Temporary directory on target servers and CA server
@@ -225,8 +225,8 @@
         src: "{{ item.src }}"
         dest: "{{ item.dest }}"
         state: link
-        owner: cockpit-ws
-        group: cockpit-ws
+        owner: root
+        group: root
         force: yes
       loop:
         - { src: "{{ key_path }}", dest: "{{ cockpit_cert_dir }}/server.key" }
@@ -244,8 +244,8 @@
     - name: Set ownership and permissions for Cockpit service (if installed)
       file:
         path: "{{ item }}"
-        owner: cockpit-ws
-        group: cockpit-ws
+        owner: root
+        group: root
         mode: "{{ '0400' if 'key' in item else '0644' }}"
       loop:
         - "{{ key_path }}"
