@@ -1,4 +1,5 @@
-- name: Generate a signed key pair on a remote server
+# This file will not work correctly - see cockpit_tls.yml for the right approach (but wrong key store)
+- ERRERRname: Generate a signed key pair on a remote server
   hosts: ca_server
   become: yes
   vars:
