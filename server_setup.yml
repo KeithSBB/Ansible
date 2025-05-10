@@ -1,0 +1,263 @@
+---
+- name: Generate and sign server certificates with Cockpit compatibility
+  hosts: all  # Targets all servers in the inventory
+  become: yes
+  collections:
+    - community.crypto
+  vars:
+    ca_server: "{{ groups['ca_server'][0] }}"  # CA server (CertAuthority)
+    ca_server_ip: "192.168.50.176"  # IP address of CertAuthority
+    key_path: /etc/pki/tls/private/server-key.pem
+    cert_path: /etc/pki/tls/certs/server-cert.pem
+    csr_path: /etc/pki/tls/csrs/server-csr.pem
+    cockpit_cert_dir: /etc/cockpit/ws-certs.d
+    tmp_dir: /var/tmp  # Temporary directory on target servers and CA server
+    ca_user: keith     # Ansible user on ca_server (CertAuthority)
+    control_tmp_dir: /home/keith/tmp  # Temporary directory on CertAuthority
+  tasks:
+    - name: Ensure OpenSSL and python3-cryptography are installed
+      package:
+        name:
+          - openssl
+          - python3-cryptography
+        state: present
+      # Runs on each server
+
+    - name: Ensure /etc/pki/tls and subdirectories exist
+      file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+        owner: root
+        group: root
+      loop:
+        - /etc/pki/tls
+        - /etc/pki/tls/private
+        - /etc/pki/tls/certs
+        - /etc/pki/tls/csrs
+      # Creates required directories if they don't exist
+
+    - name: Ensure /var/tmp is writable on target server
+      file:
+        path: "{{ tmp_dir }}"
+        state: directory
+        mode: '1777'  # Sticky bit, world-writable
+      # Ensures /var/tmp is accessible for temporary files
+
+    - name: Ensure /var/tmp is writable on CA server
+      file:
+        path: "{{ tmp_dir }}"
+        state: directory
+        mode: '1777'  # Sticky bit, world-writable
+      delegate_to: "{{ ca_server }}"
+      become: yes
+      # Ensures /var/tmp is accessible on CertAuthority
+
+    - name: Ensure temporary directory exists on control node
+      file:
+        path: "{{ control_tmp_dir }}"
+        state: directory
+        mode: '0700'
+        owner: "{{ ca_user }}"
+        group: "{{ ca_user }}"
+      delegate_to: localhost
+      # Creates /home/keith/tmp on CertAuthority
+
+    - name: Generate SSH key for Ansible user
+      user:
+        name: "{{ ansible_user }}"
+        generate_ssh_key: yes
+        ssh_key_bits: 4096
+        ssh_key_type: rsa
+        ssh_key_file: .ssh/id_rsa
+        state: present
+      # Generates SSH key for the Ansible user (e.g., mycroft)
+
+    - name: Fetch Ansible user's public key
+      slurp:
+        src: "/home/{{ ansible_user }}/.ssh/id_rsa.pub"
+      register: ansible_public_key
+      # Reads the public key
+
+    - name: Ensure CA user home directory has correct permissions
+      file:
+        path: "/home/{{ ca_user }}"
+        state: directory
+        mode: '0700'
+        owner: "{{ ca_user }}"
+        group: "{{ ca_user }}"
+      delegate_to: "{{ ca_server }}"
+      become: yes
+      # Ensures ~keith has strict permissions on CertAuthority
+
+    - name: Ensure .ssh directory exists on CA server
+      file:
+        path: "/home/{{ ca_user }}/.ssh"
+        state: directory
+        mode: '0700'
+        owner: "{{ ca_user }}"
+        group: "{{ ca_user }}"
+      delegate_to: "{{ ca_server }}"
+      become: yes
+      # Creates ~keith/.ssh on CertAuthority
+
+    - name: Copy Ansible user's public key to CA server
+      copy:
+        content: "{{ ansible_public_key['content'] | b64decode }}"
+        dest: "/home/{{ ca_user }}/.ssh/authorized_keys"
+        mode: '0600'
+        owner: "{{ ca_user }}"
+        group: "{{ ca_user }}"
+      delegate_to: "{{ ca_server }}"
+      become: yes
+      # Adds public key to keith's authorized_keys on CertAuthority
+
+    - name: Generate private key for server
+      openssl_privatekey:
+        path: "{{ key_path }}"
+        size: 2048
+        mode: '0400'
+        owner: root
+        group: root
+        state: present
+      # Generates private key on each server
+
+    - name: Generate CSR for server
+      openssl_csr:
+        path: "{{ csr_path }}"
+        privatekey_path: "{{ key_path }}"
+        common_name: "{{ inventory_hostname }}"
+        subject:
+          C: US
+          ST: California
+          L: SantaBarbara
+          O: Home LAN
+        mode: '0600'
+        owner: root
+        group: root
+        state: present
+      # Generates CSR on each server
+
+    - name: Remove existing CSR on control node
+      file:
+        path: "{{ control_tmp_dir }}/server-{{ inventory_hostname }}.csr"
+        state: absent
+      delegate_to: localhost
+      # Ensures no existing file causes permission issues
+
+    - name: Fetch CSR to control node
+      fetch:
+        src: "{{ csr_path }}"
+        dest: "{{ control_tmp_dir }}/server-{{ inventory_hostname }}.csr"
+        flat: yes
+      # Fetches CSR to /home/keith/tmp on CertAuthority
+
+    - name: Copy CSR to CA server
+      copy:
+        src: "{{ control_tmp_dir }}/server-{{ inventory_hostname }}.csr"
+        dest: "{{ tmp_dir }}/server-{{ inventory_hostname }}.csr"
+        mode: '0600'
+        owner: "{{ ca_user }}"
+        group: "{{ ca_user }}"
+      delegate_to: "{{ ca_server }}"
+      become: yes
+      # Copies CSR to /var/tmp on CertAuthority
+
+    - name: Clean up CSR on control node
+      file:
+        path: "{{ control_tmp_dir }}/server-{{ inventory_hostname }}.csr"
+        state: absent
+      delegate_to: localhost
+      # Removes temporary CSR from control node
+
+    - name: Sign CSR with CA on CA server
+      x509_certificate:
+        path: "{{ tmp_dir }}/server-{{ inventory_hostname }}.crt"
+        csr_path: "{{ tmp_dir }}/server-{{ inventory_hostname }}.csr"
+        ownca_privatekey_path: /etc/pki/lan-ca/private/ca-key.pem
+        ownca_path: /etc/pki/lan-ca/certs/ca-cert.pem
+        provider: ownca
+        ownca_not_after: "+365d"  # Certificate valid for 1 year
+        ownca_digest: sha256
+        mode: '0644'
+        owner: "{{ ca_user }}"
+        group: "{{ ca_user }}"
+        state: present
+      delegate_to: "{{ ca_server }}"
+      become: yes
+      # Signs CSR on CertAuthority
+
+    - name: Remove existing certificate on target server
+      file:
+        path: "{{ cert_path }}"
+        state: absent
+      # Ensures no existing certificate causes permission issues
+
+    - name: Copy signed certificate to target server
+      copy:
+        src: "{{ tmp_dir }}/server-{{ inventory_hostname }}.crt"
+        dest: "{{ cert_path }}"
+        mode: '0644'
+        owner: root
+        group: root
+      become: yes
+      # Copies certificate to target server
+
+    - name: Clean up CSR and certificate on CA server
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ tmp_dir }}/server-{{ inventory_hostname }}.csr"
+        - "{{ tmp_dir }}/server-{{ inventory_hostname }}.crt"
+      delegate_to: "{{ ca_server }}"
+      become: yes
+      # Cleans up temporary files on CertAuthority
+
+    - name: Check if /etc/cockpit/ws-certs.d exists
+      stat:
+        path: "{{ cockpit_cert_dir }}"
+      register: cockpit_dir
+      # Checks if Cockpit certificate directory exists
+
+    - name: Create symbolic links for Cockpit if directory exists
+      file:
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+        state: link
+        owner: cockpit-ws
+        group: cockpit-ws
+        force: yes
+      loop:
+        - { src: "{{ key_path }}", dest: "{{ cockpit_cert_dir }}/server.key" }
+        - { src: "{{ cert_path }}", dest: "{{ cockpit_cert_dir }}/server.crt" }
+      when: cockpit_dir.stat.exists
+      notify: Restart Cockpit
+      # Creates symlinks in /etc/cockpit/ws-certs.d if it exists
+
+    - name: Check if Cockpit is installed
+      stat:
+        path: /usr/lib/systemd/system/cockpit.service
+      register: cockpit_service
+      # Checks if Cockpit is installed
+
+    - name: Set ownership and permissions for Cockpit service (if installed)
+      file:
+        path: "{{ item }}"
+        owner: cockpit-ws
+        group: cockpit-ws
+        mode: "{{ '0400' if 'key' in item else '0644' }}"
+      loop:
+        - "{{ key_path }}"
+        - "{{ cert_path }}"
+      when: cockpit_service.stat.exists
+      notify: Restart Cockpit
+      # Sets Cockpit-specific permissions only if Cockpit is installed
+
+  handlers:
+    - name: Restart Cockpit
+      service:
+        name: cockpit
+        state: restarted
+      when: cockpit_service.stat.exists
+      # Restarts Cockpit only if installed
