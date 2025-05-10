@@ -1,0 +1,19 @@
+    - name: Send WoL magic packet to wake server
+      command: wakeonlan "{{ hostvars[inventory_hostname].mac_address }}"
+      args:
+        warn: false
+      delegate_to: "{{ relay_host }}"
+      register: wol_result
+      changed_when: false
+      run_once: true
+      when: hostvars[inventory_hostname].mac_address is defined
+      # Sends WoL packet to wake the server
+
+    - name: Wait for server to be reachable
+      wait_for_connection:
+        host: "{{ inventory_hostname }}"
+        port: 22
+        timeout: 300
+      delegate_to: localhost
+      when: wol_result is success
+      # Waits for the server to come online
