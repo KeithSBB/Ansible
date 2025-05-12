@@ -65,7 +65,7 @@
         group: "{{ ca_user }}"
       delegate_to: localhost
       become_user: ansible
-      become: no
+      become: yes
       # Creates /home/ansible/tmp on CertAuthority
 
     - name: Generate SSH key for Ansible user
