@@ -2,7 +2,7 @@
 - name: Generate and sign server certificates with Cockpit compatibility
   hosts: servers  # Targets all servers in the inventory
   become: yes
-  #become_user: ansible 
+  become_user: ansible 
   collections:
     - community.crypto
   vars:
