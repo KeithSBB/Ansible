@@ -56,16 +56,16 @@
       become: no
       # Ensures /var/tmp is accessible on CertAuthority
 
-#    - name: Ensure temporary directory exists on control node
- #     file:
-  #      path: "{{ control_tmp_dir }}"
-   #     state: directory
-    #    mode: '0700'
-     #   owner: "{{ ca_user }}"
-      #  group: "{{ ca_user }}"
-#      delegate_to: localhost
- #     become_user: ansible
-  #    become: yes
+    - name: Ensure temporary directory exists on control node
+      file:
+        path: "{{ control_tmp_dir }}"
+        state: directory
+        mode: '0700'
+        owner: "{{ ca_user }}"
+        group: "{{ ca_user }}"
+      delegate_to: localhost
+      become_user: ansible
+      become: yes
       # Creates /home/ansible/tmp on CertAuthority
 
     - name: Generate SSH key for Ansible user
