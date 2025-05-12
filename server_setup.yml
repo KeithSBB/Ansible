@@ -12,7 +12,7 @@
     csr_path: /etc/pki/tls/csrs/server-csr.pem
     cockpit_cert_dir: /etc/cockpit/ws-certs.d
     tmp_dir: /var/tmp  # Temporary directory on target servers and CA server
-    ca_user: keith     # Ansible user on ca_server (CertAuthority)
+    ca_user: ansible     # Ansible user on ca_server (CertAuthority)
     control_tmp_dir: /home/keith/tmp  # Temporary directory on CertAuthority
   tasks:
     - name: Ensure OpenSSL and python3-cryptography are installed
