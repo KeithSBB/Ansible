@@ -13,7 +13,7 @@
     cockpit_cert_dir: /etc/cockpit/ws-certs.d
     tmp_dir: /var/tmp  # Temporary directory on target servers and CA server
     ca_user: ansible     # Ansible user on ca_server (CertAuthority)
-    control_tmp_dir: /home/keith/tmp  # Temporary directory on CertAuthority
+    control_tmp_dir: /home/ansible/tmp  # Temporary directory on CertAuthority
   tasks:
     - name: Ensure OpenSSL and python3-cryptography are installed
       package:
@@ -61,7 +61,7 @@
         owner: "{{ ca_user }}"
         group: "{{ ca_user }}"
       delegate_to: localhost
-      # Creates /home/keith/tmp on CertAuthority
+      # Creates /home/ansible/tmp on CertAuthority
 
     - name: Generate SSH key for Ansible user
       user:
@@ -88,7 +88,7 @@
         group: "{{ ca_user }}"
       delegate_to: "{{ ca_server }}"
       become: yes
-      # Ensures ~keith has strict permissions on CertAuthority
+      # Ensures ~ansible has strict permissions on CertAuthority
 
     - name: Ensure .ssh directory exists on CA server
       file:
@@ -99,7 +99,7 @@
         group: "{{ ca_user }}"
       delegate_to: "{{ ca_server }}"
       become: yes
-      # Creates ~keith/.ssh on CertAuthority
+      # Creates ~ansible/.ssh on CertAuthority
 
     - name: Copy Ansible user's public key to CA server
       copy:
@@ -110,7 +110,7 @@
         group: "{{ ca_user }}"
       delegate_to: "{{ ca_server }}"
       become: yes
-      # Adds public key to keith's authorized_keys on CertAuthority
+      # Adds public key to ansible's authorized_keys on CertAuthority
 
     - name: Generate private key for server
       openssl_privatekey:
@@ -150,7 +150,7 @@
         src: "{{ csr_path }}"
         dest: "{{ control_tmp_dir }}/server-{{ inventory_hostname }}.csr"
         flat: yes
-      # Fetches CSR to /home/keith/tmp on CertAuthority
+      # Fetches CSR to /home/ansible/tmp on CertAuthority
 
     - name: Copy CSR to CA server
       copy:
