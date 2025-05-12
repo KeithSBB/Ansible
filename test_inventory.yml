@@ -22,6 +22,6 @@
       ansible.builtin.debug:
         msg: |
           Node: {{ inventory_hostname }}
-          Reachable: {{ 'Yes\' if ping_result.ping is defined and ping_result.ping == 'pong' else 'No' }}
+          Reachable: {{ 'Yes' if ping_result.ping is defined and ping_result.ping == 'pong' else 'No' }}
           SSH with ansible user: {{ 'Yes' if whoami_result.rc is defined and whoami_result.rc == 0 and whoami_result.stdout == 'ansible' else 'No' }}
           Sudo privileges: {{ 'Yes' if sudo_result.rc is defined and sudo_result.rc == 0 and sudo_result.stdout == 'root' else 'No' }}
