@@ -22,6 +22,8 @@
           - openssl
           - python3-cryptography
         state: present
+      become: yes
+      become_user: ansible  # Explicitly set become_user here
       # Runs on each server
 
     - name: Ensure /etc/pki/tls and subdirectories exist
