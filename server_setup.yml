@@ -64,6 +64,7 @@
         owner: "{{ ca_user }}"
         group: "{{ ca_user }}"
       delegate_to: localhost
+      ansible_user: ansible
       become: no
       # Creates /home/ansible/tmp on CertAuthority
 
