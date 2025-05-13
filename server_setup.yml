@@ -78,7 +78,6 @@
         subject_alt_name:
           - "DNS:{{ inventory_hostname }}"
           - "DNS:{{ inventory_hostname }}.home.arpa"
-          - "IP:{{ ansible_host }}"
         mode: '0600'
         owner: root
         group: root
