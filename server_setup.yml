@@ -42,6 +42,11 @@
         mode: '1777'  # Sticky bit, world-writable
       # Ensures /var/tmp is accessible on target servers
 
+    - name: Debug Ansible user
+        ansible.builtin.debug:
+        msg: "Ansible user is {{ ansible_user | default(ansible_user_id) }}"
+        delegate_to: localhost
+
     - name: Ensure /var/tmp is writable on CA server (control node)
       file:
         path: "{{ ca_tmp_dir }}"
