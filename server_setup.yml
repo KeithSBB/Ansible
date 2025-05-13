@@ -75,9 +75,9 @@
           ST: California
           L: SantaBarbara
           O: Home LAN
-        subject_alt_name:
-          - "DNS:{{ inventory_hostname }}"
-          - "DNS:{{ inventory_hostname }}.home.arpa"
+        subject_alt_name: >-
+          {{ ['DNS:' + inventory_hostname, 'DNS:' + inventory_hostname + '.home.arpa'] +
+             (additional_hostnames | default([]) | map('regex_replace', '^(.*)$', 'DNS:\\1') | list) }}
         mode: '0600'
         owner: root
         group: root
