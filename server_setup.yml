@@ -67,22 +67,22 @@
       
     - name: Generate CSR for server
       openssl_csr:
-      path: "{{ csr_path }}"
-      privatekey_path: "{{ key_path }}"
-      common_name: "{{ inventory_hostname }}"
-      subject:
-        C: US
-        ST: California
-        L: SantaBarbara
-        O: Home LAN
-      subject_alt_name:
-        - "DNS:{{ inventory_hostname }}"
-        - "DNS:{{ inventory_hostname }}.home.arpa"
-        - "IP:{{ ansible_host }}"
-      mode: '0600'
-      owner: root
-      group: root
-      state: present
+        path: "{{ csr_path }}"
+        privatekey_path: "{{ key_path }}"
+        common_name: "{{ inventory_hostname }}"
+        subject:
+          C: US
+          ST: California
+          L: SantaBarbara
+          O: Home LAN
+        subject_alt_name:
+          - "DNS:{{ inventory_hostname }}"
+          - "DNS:{{ inventory_hostname }}.home.arpa"
+          - "IP:{{ ansible_host }}"
+        mode: '0600'
+        owner: root
+        group: root
+        state: present
       # Generates CSR on each target server
 
     - name: Remove existing CSR on control node
