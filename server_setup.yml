@@ -52,7 +52,7 @@
         path: "{{ tmp_dir }}"
         state: directory
         mode: '1777'  # Sticky bit, world-writable
-      delegate_to: "{{ ca_server }}"
+      delegate_to: localhost
       # Ensures /var/tmp is accessible on CertAuthority
 
     - name: Ensure temporary directory exists on control node
