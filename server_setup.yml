@@ -85,7 +85,7 @@
         group: root
         state: present
       vars:
-        san_list: "{{ [ 'DNS:' + inventory_hostname, 'DNS:' + inventory_hostname + '.home.arpa' ] + (additional_hostnames | default([]) | map('prepend', 'DNS:') | list) }}"
+        san_list: "{{ [ 'DNS:' + inventory_hostname, 'DNS:' + inventory_hostname + '.home.arpa' ] + (additional_hostnames | default([]) | map('regex_replace', '^(.*)$', 'DNS:\\1') | list) }}"
       # Generates CSR on each target server
 
     - name: Remove existing CSR on control node
