@@ -65,6 +65,10 @@
         state: present
       # Generates private key on each target server
       
+    - name: Debug additional hostnames
+      debug:
+        msg: "Additional hostnames: {{ additional_hostnames | default([]) }}"
+
     - name: Generate CSR for server
       openssl_csr:
         path: "{{ csr_path }}"
@@ -75,13 +79,13 @@
           ST: California
           L: SantaBarbara
           O: Home LAN
-        subject_alt_name: >-
-          {{ ['DNS:' + inventory_hostname, 'DNS:' + inventory_hostname + '.home.arpa'] +
-             (additional_hostnames | default([]) | map('regex_replace', '^(.*)$', 'DNS:\\1') | list) }}
+        subject_alt_name: "{{ san_list }}"
         mode: '0600'
         owner: root
         group: root
         state: present
+      vars:
+        san_list: "{{ [ 'DNS:' + inventory_hostname, 'DNS:' + inventory_hostname + '.home.arpa' ] + (additional_hostnames | default([]) | map('prepend', 'DNS:') | list) }}"
       # Generates CSR on each target server
 
     - name: Remove existing CSR on control node
