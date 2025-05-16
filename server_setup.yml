@@ -13,6 +13,16 @@
     tmp_dir: /var/tmp  # Temporary directory on target servers
     ca_tmp_dir: /var/tmp  # Temporary directory on CA server (control node)
   tasks:
+    - name: Include Fedora variables
+      include_vars:
+        file: vars/fedora.yml
+      when: ansible_distribution == "Fedora"
+
+    - name: Include Debian variables
+      include_vars:
+        file: vars/debian.yml
+      when: ansible_os_family == "Debian"
+  
     - name: Ensure OpenSSL and python3-cryptography are installed
       package:
         name:
