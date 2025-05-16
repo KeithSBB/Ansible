@@ -39,10 +39,10 @@
         owner: root
         group: root
       loop:
-        - /etc/pki/tls
-        - /etc/pki/tls/private
-        - /etc/pki/tls/certs
-        - /etc/pki/tls/csrs
+        - "{{tls_dir}}"
+        - "{{private_dir}}"
+        - "{{cert_dir}}"
+        - "{{csr_dir}}"
       # Creates required directories on each target server
 
     - name: Ensure /var/tmp is writable on target server
