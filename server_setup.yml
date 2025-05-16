@@ -40,7 +40,7 @@
         group: root
       loop:
         - "{{tls_dir}}"
-        - "{{private_dir}}"
+        - "{{key_dir}}"
         - "{{cert_dir}}"
         - "{{csr_dir}}"
       # Creates required directories on each target server
