@@ -6,9 +6,9 @@
   vars:
     ca_server: "{{ ansible_host }}"  # CA server is the control node
     ca_server_ip: "192.168.50.176"  # IP address of CA server (control node)
-    key_path: /etc/pki/tls/private/server.key
-    cert_path: /etc/pki/tls/certs/server.crt
-    csr_path: /etc/pki/tls/csrs/server-csr.pem
+    #key_path: /etc/pki/tls/private/server.key
+    #cert_path: /etc/pki/tls/certs/server.crt
+    #csr_path: /etc/pki/tls/csrs/server-csr.pem
     cockpit_cert_dir: /etc/cockpit/ws-certs.d
     tmp_dir: /var/tmp  # Temporary directory on target servers
     ca_tmp_dir: /var/tmp  # Temporary directory on CA server (control node)
@@ -39,10 +39,10 @@
         owner: root
         group: root
       loop:
-        - "{{tls_dir}}"
-        - "{{key_dir}}"
-        - "{{cert_dir}}"
-        - "{{csr_dir}}"
+        - "{{tls_path}}"
+        - "{{key_path}}"
+        - "{{cert_path}}"
+        - "{{csr_path}}"
       # Creates required directories on each target server
 
     - name: Ensure /var/tmp is writable on target server
