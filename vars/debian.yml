@@ -1,4 +1,4 @@
-tls_dir: /etc/ssl
-cert_dir: /etc/ssl/certs
-key_dir: /etc/ssl/private
-csr_dir: /etc/ssl/csrs
+tls_path: /etc/ssl
+cert_path: /etc/ssl/certs
+key_path: /etc/ssl/private
+csr_path: /etc/ssl/csrs
