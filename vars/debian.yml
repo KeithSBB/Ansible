@@ -1,4 +1,4 @@
 tls_dir: /etc/ssl
 cert_dir: /etc/ssl/certs
 key_dir: /etc/ssl/private
-csr_dir: /etc/ssl/csr
+csr_dir: /etc/ssl/csrs
