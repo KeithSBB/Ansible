@@ -28,14 +28,15 @@
         file: vars/haos.yml
       when: ansible_distribution == "Alpine"
   
-    - name: Ensure OpenSSL and python3-cryptography are installed
+    - name: Ensure OpenSSL and cryptography packages are installed
       package:
         name:
           - openssl
-          - python3-cryptography
+          - "{{ 'py3-cryptography' if ansible_os_family == 'Alpine' else 'python3-cryptography' }}"
         state: present
+      become: yes
       # Installs required packages on each target server
-
+  
     - name: Ensure /etc/pki/tls and subdirectories exist
       file:
         path: "{{ item }}"
