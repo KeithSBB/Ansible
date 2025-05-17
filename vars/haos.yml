@@ -1,0 +1,4 @@
+tls_path: /ssl
+cert_path: /ssl/certs
+key_path: /ssl/private
+csr_path: /ssl/csrs
