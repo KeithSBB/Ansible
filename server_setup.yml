@@ -22,6 +22,11 @@
       include_vars:
         file: vars/debian.yml
       when: ansible_os_family == "Debian"
+
+    - name: Include Home Assistant variable
+      include_vars:
+        file: vars/haos.yml
+      when: ansible_distribution == "Alpine"
   
     - name: Ensure OpenSSL and python3-cryptography are installed
       package:
