@@ -1,0 +1,40 @@
+- name: Allow daemons to dump core
+  command: semanage boolean -m --on daemons_dump_core
+
+- name: Allow daemons to enable cluster mode
+  command: semanage boolean -m --on daemons_enable_cluster_mode
+
+- name: Allow domain to can mmap files
+  command: semanage boolean -m --on domain_can_mmap_files
+
+- name: Allow httpd to can network connect
+  command: semanage boolean -m --on httpd_can_network_connect
+
+- name: Allow nis to enabled
+  command: semanage boolean -m --on nis_enabled
+
+- name: Allow virt to sandbox use all caps
+  command: semanage boolean -m --on virt_sandbox_use_all_caps
+
+- name: Allow virt to use nfs
+  command: semanage boolean -m --on virt_use_nfs
+
+- name: Set up port customizations
+  shell: |
+    semanage port -D
+    semanage port -a -t http_port_t -r 's0' -p tcp 5000
+
+- name: Set up fcontext customizations
+  shell: |
+    semanage fcontext -D
+    semanage fcontext -a -f a -t zoneminder_var_lib_t -r 's0' '/mnt/data/zmdata(/.*)?'
+    semanage fcontext -a -f a -t zoneminder_exec_t -r 's0' '/var/lib/zmeventnotification/bin(/.*)?'
+    semanage fcontext -a -f a -t zoneminder_exec_t -r 's0' '/var/lib/zmeventnotification/bin/zm_detect.py'
+    semanage fcontext -a -f a -t sysctl_t -r 's0' '/proc/pressure/cpu'
+    semanage fcontext -a -f a -t mnt_t -r 's0' '/mnt/data'
+    semanage fcontext -a -f a -t httpd_sys_rw_content_t -r 's0' '/mnt/data/ncdata(/.*)?'
+    semanage fcontext -a -f a -t httpd_sys_rw_content_t -r 's0' '/mnt/data/cache(/.*)?'
+    semanage fcontext -a -f a -t zoneminder_exec_t -r 's0' '/var/lib/zmeventnotification/bin/zm_event_end.sh'
+    semanage fcontext -a -f a -t zoneminder_exec_t -r 's0' '/var/lib/zmeventnotification/bin/zm_event_start.sh'
+    semanage fcontext -a -f a -t zoneminder_var_lib_t -r 's0' '/mnt/data/zmdata/5(/.*)?'
+    semanage fcontext -a -f a -t httpd_sys_rw_content_t -r 's0' '/usr/share/nextcloud/.htaccess'
