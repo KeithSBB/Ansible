@@ -85,24 +85,30 @@
       debug:
         msg: "Additional hostnames: {{ additional_hostnames | default([]) }}"
 
-    - name: Generate CSR for server
-      openssl_csr:
-        path: "{{ csr_path }}/server-csr.pem"
-        privatekey_path: "{{ key_path }}/server.key"
-        common_name: "{{ inventory_hostname }}"
-        subject:
-          C: US
-          ST: California
-          L: SantaBarbara
-          O: Home LAN
-        subject_alt_name: "{{ san_list }}"
-        mode: '0600'
-        owner: root
-        group: root
-        state: present
-      vars:
-        san_list: "{{ [ 'DNS:' + inventory_hostname, 'DNS:' + inventory_hostname + '.home.arpa' ] + (additional_hostnames | default([]) | map('regex_replace', '^(.*)$', 'DNS:\\1') | list) }}"
-      # Generates CSR on each target server
+- name: Generate CSR for server
+  openssl_csr:
+    path: "{{ csr_path }}/server-csr.pem"
+    privatekey_path: "{{ key_path }}/server.key"
+    common_name: "{{ inventory_hostname }}"
+    subject:
+      C: US
+      ST: California
+      L: SantaBarbara
+      O: Home LAN
+    subject_alt_name: "{{ san_list }}"
+    key_usage:
+      - digitalSignature
+      - keyEncipherment
+    extended_key_usage:
+      - serverAuth
+    mode: '0600'
+    owner: root
+    group: root
+    state: present
+  vars:
+    san_list: "{{ [ 'DNS:' + inventory_hostname, 'DNS:' + inventory_hostname + '.home.arpa', 'IP:' + ansible_host ] + (additional_hostnames | default([]) | map('regex_replace', '^(.*)$', 'DNS:\\1') | list) }}"
+
+
 
     - name: Remove existing CSR on control node
       file:
@@ -125,15 +131,21 @@
         ownca_privatekey_path: /etc/pki/lan-ca/private/ca-key.pem
         ownca_path: /etc/pki/lan-ca/certs/ca-cert.pem
         provider: ownca
-        ownca_not_after: "+365d"  # Certificate valid for 1 year
+        ownca_not_after: "+90d"  # Shorter validity for better security
         ownca_digest: sha256
+        key_usage:
+          - digitalSignature
+          - keyEncipherment
+        extended_key_usage:
+          - serverAuth
+        authority_information_access:
+          - caIssuers: "http://ca.home.arpa/certs/ca-cert.pem"
         mode: '0644'
         owner: root
         group: root
         state: present
       delegate_to: localhost
       become: yes
-      # Signs CSR on control node (CA server)
 
     - name: Remove existing certificate on target server
       file:
@@ -159,6 +171,22 @@
         - "{{ ca_tmp_dir }}/server-{{ inventory_hostname }}.crt"
       delegate_to: localhost
       # Cleans up temporary files on control node
+
+    - name: Check certificate expiry
+      command: openssl x509 -in "{{ cert_path }}/server.crt" -checkend 604800  # 7 days in seconds
+      register: cert_expiry
+      ignore_errors: yes
+      changed_when: cert_expiry.rc != 0
+      notify: Regenerate Certificate
+
+    - name: Backup CA private key
+      copy:
+        src: /etc/pki/lan-ca/private/ca-key.pem
+        dest: /etc/pki/lan-ca/private/ca-key-backup.pem
+        mode: '0400'
+        owner: root
+        group: root
+        remote_src: yes
 
     - name: Check if /etc/cockpit/ws-certs.d exists
       stat:
@@ -199,11 +227,13 @@
       when: cockpit_service.stat.exists
       notify: Restart Cockpit
       # Sets permissions for Cockpit if installed
-
   handlers:
+    - name: Update CA Trust
+      command: update-ca-trust
+      when: ansible_distribution == "Fedora" or ansible_os_family == "RedHat"
+  
     - name: Restart Cockpit
       service:
         name: cockpit
         state: restarted
       when: cockpit_service.stat.exists
-      # Restarts Cockpit only if installed
