@@ -28,13 +28,13 @@
         - { dest: /etc/pki/lan-ca/index.txt, content: '' }
         - { dest: /etc/pki/lan-ca/serial, content: '1000\n' }
     - name: Generate CA private key (ECDSA)
-       openssl_privatekey:
-         path: /etc/pki/lan-ca/private/ca-key.pem
-         type: ECC
-         curve: secp384r1  # Strong curve, widely supported
-         mode: '0400'
-         state: present
-         state: present
+      openssl_privatekey:
+        path: /etc/pki/lan-ca/private/ca-key.pem
+        type: ECC
+        curve: secp384r1  # Strong curve, widely supported
+        mode: '0400'
+        state: present
+        state: present
     - name: Generate CA certificate
       x509_certificate:
         path: /etc/pki/lan-ca/certs/ca-cert.pem
