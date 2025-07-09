@@ -34,7 +34,6 @@
         curve: secp384r1  # Strong curve, widely supported
         mode: '0400'
         state: present
-        state: present
     - name: Generate CA certificate
       x509_certificate:
         path: /etc/pki/lan-ca/certs/ca-cert.pem
