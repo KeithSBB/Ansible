@@ -59,7 +59,7 @@
           - full_name:  
               - "URI:http://certauthority.home.arpa/crl/ca.crl"
         key_usage:
-          - certificateSign
+          - keyCertSign
           - cRLSign
         key_usage_critical: true
         extended_key_usage:
