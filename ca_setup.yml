@@ -1,248 +1,75 @@
-
 ---
-- name: Generate and sign server certificates with Cockpit compatibility
-  hosts: servers
+- name: Set up LAN CA with OpenSSL using community.crypto
+  hosts: ca_server
   become: yes
   collections:
     - community.crypto
-  vars:
-    ca_server: "{{ ansible_host }}"
-    ca_server_ip: "192.168.50.176"
-    cockpit_cert_dir: /etc/cockpit/ws-certs.d
-    tmp_dir: /var/tmp
-    ca_tmp_dir: /var/tmp
   tasks:
-    - name: Include Fedora variables
-      include_vars:
-        file: vars/fedora.yml
-      when: ansible_distribution == "Fedora"
-
-    - name: Include Debian variables
-      include_vars:
-        file: vars/debian.yml
-      when: ansible_os_family == "Debian"
-
-    - name: Include Home Assistant variable
-      include_vars:
-        file: vars/haos.yml
-      when: ansible_distribution == "Alpine"
-
-    - name: Ensure OpenSSL and cryptography packages are installed
-      package:
-        name:
-          - openssl
-          - "{{ 'py3-cryptography' if ansible_os_family == 'Alpine' else 'python3-cryptography' }}"
+    - name: Install OpenSSL
+      dnf:
+        name: openssl
         state: present
-      become: yes
-
-    - name: Ensure /etc/pki/tls and subdirectories exist
+    - name: Create CA directory structure
       file:
         path: "{{ item }}"
         state: directory
-        mode: '0755'
-        owner: root
-        group: root
+        mode: "{{ '0700' if 'private' in item else '0755' }}"
       loop:
-        - "{{tls_path}}"
-        - "{{key_path}}"
-        - "{{cert_path}}"
-        - "{{csr_path}}"
-
-    - name: Ensure /var/tmp is writable on target server
-      file:
-        path: "{{ tmp_dir }}"
-        state: directory
-        mode: '1777'
-      delegate_to: localhost
-
-    - name: Debug Ansible user
-      ansible.builtin.debug:
-        msg: "Ansible user is {{ ansible_user | default(ansible_user_id) }}"
-      delegate_to: localhost
-
-    - name: Ensure /var/tmp is writable on CA server (control node)
-      file:
-        path: "{{ ca_tmp_dir }}"
-        state: directory
-        mode: '1777'
-      delegate_to: localhost
-
-    - name: Generate private key for server
-      openssl_privatekey:
-        path: "{{ key_path }}/server.key"
-        size: 2048
-        mode: '0400'
-        owner: root
-        group: root
-        state: present
-
-    - name: Debug additional hostnames
-      debug:
-        msg: "Additional hostnames: {{ additional_hostnames | default([]) }}"
-
-    - name: Generate CSR for server
-      openssl_csr:
-        path: "{{ csr_path }}/server-csr.pem"
-        privatekey_path: "{{ key_path }}/server.key"
-        common_name: "{{ inventory_hostname }}"
-        subject:
-          C: US
-          ST: California
-          L: SantaBarbara
-          O: Home LAN
-        subject_alt_name: "{{ san_list }}"
-        key_usage:
-          - digitalSignature
-          - keyEncipherment
-        extended_key_usage:
-          - serverAuth
-        mode: '0600'
-        owner: root
-        group: root
-        state: present
-      vars:
-        san_list: "{{ [ 'DNS:' + inventory_hostname, 'DNS:' + inventory_hostname + '.home.arpa', 'IP:' + ansible_host ] + (additional_hostnames | default([]) | map('regex_replace', '^(.*)$', 'DNS:\\1') | list) }}"
-
-    - name: Remove existing CSR on control node
-      file:
-        path: "{{ ca_tmp_dir }}/server-{{ inventory_hostname }}.csr"
-        state: absent
-      delegate_to: localhost
-
-    - name: Fetch CSR to control node
-      fetch:
-        src: "{{ csr_path }}/server-csr.pem"
-        dest: "{{ ca_tmp_dir }}/server-{{ inventory_hostname }}.csr"
-        flat: yes
-
-    - name: Sign CSR with CA on control node
-      x509_certificate:
-        path: "{{ ca_tmp_dir }}/server-{{ inventory_hostname }}.crt"
-        csr_path: "{{ ca_tmp_dir }}/server-{{ inventory_hostname }}.csr"
-        ownca_privatekey_path: /etc/pki/lan-ca/private/ca-key.pem
-        ownca_path: /etc/pki/lan-ca/certs/ca-cert.pem
-        provider: ownca
-        ownca_not_after: "+90d"
-        ownca_digest: sha256
-        key_usage:
-          - digitalSignature
-          - keyEncipherment
-        extended_key_usage:
-          - serverAuth
-        authority_information_access:
-          - caIssuers: "http://ca.home.arpa/certs/ca-cert.pem"
-        mode: '0644'
-        owner: root
-        group: root
-        state: present
-      delegate_to: localhost
-      become: yes
-
-    - name: Remove existing certificate on target server
-      file:
-        path: "{{ cert_path }}/server.crt"
-        state: absent
-
-    - name: Copy signed certificate to target server
+        - /etc/pki/lan-ca
+        - /etc/pki/lan-ca/certs
+        - /etc/pki/lan-ca/private
+        - /etc/pki/lan-ca/crl
+        - /etc/pki/lan-ca/newcerts
+    - name: Create index and serial files
       copy:
-        src: "{{ ca_tmp_dir }}/server-{{ inventory_hostname }}.crt"
-        dest: "{{ cert_path }}/server.crt"
-        mode: '0644'
-        owner: root
-        group: root
-
-    - name: Create certificate chain file
-      shell: |
-        cat {{ cert_path }}/server.crt /etc/pki/lan-ca/certs/ca-cert.pem > {{ cert_path }}/server-chain.crt
-      args:
-        creates: "{{ cert_path }}/server-chain.crt"
-      become: yes
-
-    - name: Set permissions and ownership for chain file
-      file:
-        path: "{{ cert_path }}/server-chain.crt"
-        mode: '0644'
-        owner: root
-        group: root
-        state: file
-      become: yes
-
-    - name: Set SELinux context for chain file
-      sefile:
-        path: "{{ cert_path }}/server-chain.crt"
-        setype: public_content_t
-        state: file
-      when: ansible_selinux is defined and ansible_selinux.status == 'enabled'
-      become: yes
-
-    - name: Clean up CSR and certificate on control node
-      file:
-        path: "{{ item }}"
-        state: absent
-      loop:
-        - "{{ ca_tmp_dir }}/server-{{ inventory_hostname }}.csr"
-        - "{{ ca_tmp_dir }}/server-{{ inventory_hostname }}.crt"
-      delegate_to: localhost
-
-    - name: Check certificate expiry
-      command: openssl x509 -in "{{ cert_path }}/server.crt" -checkend 604800
-      register: cert_expiry
-      ignore_errors: yes
-      changed_when: cert_expiry.rc != 0
-      notify: Regenerate Certificate
-
-    - name: Backup CA private key
-      copy:
-        src: /etc/pki/lan-ca/private/ca-key.pem
-        dest: /etc/pki/lan-ca/private/ca-key-backup.pem
-        mode: '0400'
-        owner: root
-        group: root
-        remote_src: yes
-
-    - name: Check if /etc/cockpit/ws-certs.d exists
-      stat:
-        path: "{{ cockpit_cert_dir }}"
-      register: cockpit_dir
-
-    - name: Create symbolic links for Cockpit if directory exists
-      file:
-        src: "{{ item.src }}"
+        content: "{{ item.content }}"
         dest: "{{ item.dest }}"
-        state: link
-        owner: root
-        group: root
-        force: yes
+        mode: '0644'
       loop:
-        - { src: "{{ key_path }}/server.key", dest: "{{ cockpit_cert_dir }}/server.key" }
-        - { src: "{{ cert_path }}/server.crt", dest: "{{ cockpit_cert_dir }}/server.crt" }
-      when: cockpit_dir.stat.exists
-      notify: Restart Cockpit
-
-    - name: Check if Cockpit is installed
-      stat:
-        path: /usr/lib/systemd/system/cockpit.service
-      register: cockpit_service
-
-    - name: Set ownership and permissions for Cockpit service (if installed)
-      file:
-        path: "{{ item }}"
-        owner: root
-        group: root
-        mode: "{{ '0400' if 'key' in item else '0644' }}"
-      loop:
-        - "{{ key_path }}/server.key"
-        - "{{ cert_path }}/server.crt"
-      when: cockpit_service.stat.exists
-      notify: Restart Cockpit
-
-  handlers:
-    - name: Update CA Trust
-      command: update-ca-trust
-      when: ansible_distribution == "Fedora" or ansible_os_family == "RedHat"
-
-    - name: Restart Cockpit
-      service:
-        name: cockpit
-        state: restarted
-      when: cockpit_service.stat.exists
+        - { dest: /etc/pki/lan-ca/index.txt, content: '' }
+        - { dest: /etc/pki/lan-ca/serial, content: '1000\n' }
+   - name: Generate CA private key (ECDSA)
+      openssl_privatekey:
+        path: /etc/pki/lan-ca/private/ca-key.pem
+        type: ECC
+        curve: secp384r1  # Strong curve, widely supported
+        mode: '0400'
+        state: present
+        state: present
+  - name: Generate CA certificate
+    x509_certificate:
+      path: /etc/pki/lan-ca/certs/ca-cert.pem
+      privatekey_path: /etc/pki/lan-ca/private/ca-key.pem
+      provider: selfsigned
+      selfsigned_not_after: "+3650d"
+      selfsigned_digest: sha256
+      subject:
+        C: US
+        ST: California
+        L: SantaBarbara
+        O: Home LAN
+        CN: Smith LAN CA
+      basic_constraints:
+        - CA:TRUE
+        - pathlen:1  # Limits intermediate CAs to one level
+      key_usage:
+        - certificateSign
+        - cRLSign
+      extended_key_usage:
+        - codeSigning  # Optional, depending on use case
+      crl_distribution_points:
+        - uri: "http://certauthority.home.arpa/crl/lan-ca.crl"
+      mode: '0644'
+      state: present
+  - name: Generate initial CRL
+    openssl_crl:
+      path: /etc/pki/lan-ca/crl/lan-ca.crl
+      privatekey_path: /etc/pki/lan-ca/private/ca-key.pem
+      issuer:
+        C: US
+        ST: California
+        L: SantaBarbara
+        O: Home LAN
+        CN: Smith LAN CA
+      last_update: "+0d"
+      next_update: "+365d"
