@@ -1,4 +1,3 @@
----
 - name: Set up LAN CA with OpenSSL using community.crypto
   hosts: ca_server
   become: yes
