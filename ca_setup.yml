@@ -55,6 +55,9 @@
           - CA:TRUE
           - pathlen:1
         basic_constraints_critical: true
+        crl_distribution_points:
+          - full_name: 
+            - url:"http://certauthority.home.arpa/crl/lan-ca.crl"
         key_usage:
           - certificateSign
           - cRLSign
@@ -69,9 +72,6 @@
         privatekey_path: /etc/pki/lan-ca/private/ca-key.pem
         csr_path: /etc/pki/tls/csrs/ca-csr.pem
         provider: selfsigned
-        crl_distribution_points:
-          - full_name: 
-            - "http://certauthority.home.arpa/crl/lan-ca.crl"
         selfsigned_not_after: "+3650d"
         selfsigned_digest: sha256
         mode: '0644'
