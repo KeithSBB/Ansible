@@ -41,7 +41,6 @@
         mode: '0755'
       vars:
         csr_path: /etc/pki/tls/csrs
-    
     - name: Generate CA CSR with subject and extensions
       community.crypto.openssl_csr:
         path: /etc/pki/tls/csrs/ca-csr.pem
@@ -63,7 +62,7 @@
         extended_key_usage:
           - codeSigning
         crl_distribution_points:
-          - fullName:
+          - full_name:
             - uri: "http://certauthority.home.arpa/crl/lan-ca.crl"
         mode: '0600'
         state: present
