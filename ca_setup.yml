@@ -57,7 +57,7 @@
         basic_constraints_critical: true
         crl_distribution_points:
           - full_name:  
-              - "URI:http://certauthority.home.arpa/crl/lan-ca.crl"
+              - "URI:http://certauthority.home.arpa/crl/ca.crl"
         key_usage:
           - certificateSign
           - cRLSign
