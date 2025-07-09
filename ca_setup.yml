@@ -62,8 +62,6 @@
           - keyCertSign
           - cRLSign
         key_usage_critical: true
-        extended_key_usage:
-          - codeSigning
         mode: '0600'
         state: present
     - name: Generate CA certificate
