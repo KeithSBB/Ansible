@@ -28,48 +28,48 @@
       loop:
         - { dest: /etc/pki/lan-ca/index.txt, content: '' }
         - { dest: /etc/pki/lan-ca/serial, content: '1000\n' }
-   - name: Generate CA private key (ECDSA)
-      openssl_privatekey:
-        path: /etc/pki/lan-ca/private/ca-key.pem
-        type: ECC
-        curve: secp384r1  # Strong curve, widely supported
-        mode: '0400'
+    - name: Generate CA private key (ECDSA)
+       openssl_privatekey:
+         path: /etc/pki/lan-ca/private/ca-key.pem
+         type: ECC
+         curve: secp384r1  # Strong curve, widely supported
+         mode: '0400'
+         state: present
+         state: present
+    - name: Generate CA certificate
+      x509_certificate:
+        path: /etc/pki/lan-ca/certs/ca-cert.pem
+        privatekey_path: /etc/pki/lan-ca/private/ca-key.pem
+        provider: selfsigned
+        selfsigned_not_after: "+3650d"
+        selfsigned_digest: sha256
+        subject:
+          C: US
+          ST: California
+          L: SantaBarbara
+          O: Home LAN
+          CN: Smith LAN CA
+        basic_constraints:
+          - CA:TRUE
+          - pathlen:1  # Limits intermediate CAs to one level
+        key_usage:
+          - certificateSign
+          - cRLSign
+        extended_key_usage:
+          - codeSigning  # Optional, depending on use case
+        crl_distribution_points:
+          - uri: "http://certauthority.home.arpa/crl/lan-ca.crl"
+        mode: '0644'
         state: present
-        state: present
-  - name: Generate CA certificate
-    x509_certificate:
-      path: /etc/pki/lan-ca/certs/ca-cert.pem
-      privatekey_path: /etc/pki/lan-ca/private/ca-key.pem
-      provider: selfsigned
-      selfsigned_not_after: "+3650d"
-      selfsigned_digest: sha256
-      subject:
-        C: US
-        ST: California
-        L: SantaBarbara
-        O: Home LAN
-        CN: Smith LAN CA
-      basic_constraints:
-        - CA:TRUE
-        - pathlen:1  # Limits intermediate CAs to one level
-      key_usage:
-        - certificateSign
-        - cRLSign
-      extended_key_usage:
-        - codeSigning  # Optional, depending on use case
-      crl_distribution_points:
-        - uri: "http://certauthority.home.arpa/crl/lan-ca.crl"
-      mode: '0644'
-      state: present
-  - name: Generate initial CRL
-    openssl_crl:
-      path: /etc/pki/lan-ca/crl/lan-ca.crl
-      privatekey_path: /etc/pki/lan-ca/private/ca-key.pem
-      issuer:
-        C: US
-        ST: California
-        L: SantaBarbara
-        O: Home LAN
-        CN: Smith LAN CA
-      last_update: "+0d"
-      next_update: "+365d"
+    - name: Generate initial CRL
+      openssl_crl:
+        path: /etc/pki/lan-ca/crl/lan-ca.crl
+        privatekey_path: /etc/pki/lan-ca/private/ca-key.pem
+        issuer:
+          C: US
+          ST: California
+          L: SantaBarbara
+          O: Home LAN
+          CN: Smith LAN CA
+        last_update: "+0d"
+        next_update: "+365d"
