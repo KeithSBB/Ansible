@@ -62,8 +62,7 @@
         extended_key_usage:
           - codeSigning
         crl_distribution_points:
-          - full_name:
-            - uri: "http://certauthority.home.arpa/crl/lan-ca.crl"
+          - full_name: "http://certauthority.home.arpa/crl/lan-ca.crl"
         mode: '0600'
         state: present
     - name: Generate CA certificate
