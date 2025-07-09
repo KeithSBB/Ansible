@@ -34,33 +34,49 @@
         curve: secp384r1  # Strong curve, widely supported
         mode: '0400'
         state: present
-    - name: Generate CA certificate
-      x509_certificate:
-        path: /etc/pki/lan-ca/certs/ca-cert.pem
+    - name: Ensure CSR directory exists
+      file:
+        path: /etc/pki/tls/csrs
+        state: directory
+        mode: '0755'
+      vars:
+        csr_path: /etc/pki/tls/csrs
+    
+    - name: Generate CA CSR with subject and extensions
+      community.crypto.openssl_csr:
+        path: /etc/pki/tls/csrs/ca-csr.pem
         privatekey_path: /etc/pki/lan-ca/private/ca-key.pem
-        provider: ownca
-        ownca_path: /etc/pki/lan-ca/certs/ca-cert.pem
-        ownca_privatekey_path: /etc/pki/lan-ca/private/ca-key.pem
-        ownca_not_after: "+3650d"
-        ownca_digest: sha256
+        common_name: "Smith LAN CA"
         subject:
           C: US
           ST: California
           L: SantaBarbara
           O: Home LAN
-          CN: Smith LAN CA
         basic_constraints:
           - CA:TRUE
           - pathlen:1
+        basic_constraints_critical: true
         key_usage:
           - certificateSign
           - cRLSign
+        key_usage_critical: true
         extended_key_usage:
           - codeSigning
         crl_distribution_points:
-          - uri: "http://certauthority.home.arpa/crl/lan-ca.crl"
-        mode: '0644'
+          - fullName:
+            - uri: "http://certauthority.home.arpa/crl/lan-ca.crl"
+        mode: '0600'
         state: present
+- name: Generate CA certificate
+  community.crypto.x509_certificate:
+    path: /etc/pki/lan-ca/certs/ca-cert.pem
+    privatekey_path: /etc/pki/lan-ca/private/ca-key.pem
+    csr_path: /etc/pki/tls/csrs/ca-csr.pem
+    provider: selfsigned
+    selfsigned_not_after: "+3650d"
+    selfsigned_digest: sha256
+    mode: '0644'
+    state: present
     - name: Generate initial CRL
       x509_crl:
         path: /etc/pki/lan-ca/crl/lan-ca.crl
