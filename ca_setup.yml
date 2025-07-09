@@ -60,7 +60,7 @@
         mode: '0644'
         state: present
     - name: Generate initial CRL
-      openssl_crl:
+      x509_crl:
         path: /etc/pki/lan-ca/crl/lan-ca.crl
         privatekey_path: /etc/pki/lan-ca/private/ca-key.pem
         issuer:
