@@ -61,9 +61,6 @@
         key_usage_critical: true
         extended_key_usage:
           - codeSigning
-        crl_distribution_points:
-          - full_name: 
-            - "http://certauthority.home.arpa/crl/lan-ca.crl"
         mode: '0600'
         state: present
     - name: Generate CA certificate
@@ -72,6 +69,9 @@
         privatekey_path: /etc/pki/lan-ca/private/ca-key.pem
         csr_path: /etc/pki/tls/csrs/ca-csr.pem
         provider: selfsigned
+        crl_distribution_points:
+          - full_name: 
+            - "http://certauthority.home.arpa/crl/lan-ca.crl"
         selfsigned_not_after: "+3650d"
         selfsigned_digest: sha256
         mode: '0644'
