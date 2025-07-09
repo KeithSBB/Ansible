@@ -67,16 +67,16 @@
             - uri: "http://certauthority.home.arpa/crl/lan-ca.crl"
         mode: '0600'
         state: present
-- name: Generate CA certificate
-  community.crypto.x509_certificate:
-    path: /etc/pki/lan-ca/certs/ca-cert.pem
-    privatekey_path: /etc/pki/lan-ca/private/ca-key.pem
-    csr_path: /etc/pki/tls/csrs/ca-csr.pem
-    provider: selfsigned
-    selfsigned_not_after: "+3650d"
-    selfsigned_digest: sha256
-    mode: '0644'
-    state: present
+    - name: Generate CA certificate
+      community.crypto.x509_certificate:
+        path: /etc/pki/lan-ca/certs/ca-cert.pem
+        privatekey_path: /etc/pki/lan-ca/private/ca-key.pem
+        csr_path: /etc/pki/tls/csrs/ca-csr.pem
+        provider: selfsigned
+        selfsigned_not_after: "+3650d"
+        selfsigned_digest: sha256
+        mode: '0644'
+        state: present
     - name: Generate initial CRL
       x509_crl:
         path: /etc/pki/lan-ca/crl/lan-ca.crl
