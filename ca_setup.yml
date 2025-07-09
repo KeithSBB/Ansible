@@ -38,9 +38,11 @@
       x509_certificate:
         path: /etc/pki/lan-ca/certs/ca-cert.pem
         privatekey_path: /etc/pki/lan-ca/private/ca-key.pem
-        provider: selfsigned
-        selfsigned_not_after: "+3650d"
-        selfsigned_digest: sha256
+        provider: ownca
+        ownca_path: /etc/pki/lan-ca/certs/ca-cert.pem
+        ownca_privatekey_path: /etc/pki/lan-ca/private/ca-key.pem
+        ownca_not_after: "+3650d"
+        ownca_digest: sha256
         subject:
           C: US
           ST: California
@@ -49,12 +51,12 @@
           CN: Smith LAN CA
         basic_constraints:
           - CA:TRUE
-          - pathlen:1  # Limits intermediate CAs to one level
+          - pathlen:1
         key_usage:
           - certificateSign
           - cRLSign
         extended_key_usage:
-          - codeSigning  # Optional, depending on use case
+          - codeSigning
         crl_distribution_points:
           - uri: "http://certauthority.home.arpa/crl/lan-ca.crl"
         mode: '0644'
