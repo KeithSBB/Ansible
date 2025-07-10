@@ -86,3 +86,4 @@
           CN: Smith LAN CA
         last_update: "+0d"
         next_update: "+365d"
+        revoked_certificates: []
