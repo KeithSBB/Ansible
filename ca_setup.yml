@@ -64,6 +64,7 @@
         key_usage_critical: true
         mode: '0600'
         state: present
+        force: true
     - name: Generate CA certificate
       community.crypto.x509_certificate:
         path: /etc/pki/lan-ca/certs/ca-cert.pem
