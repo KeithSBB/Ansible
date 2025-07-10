@@ -4,9 +4,6 @@
   collections:
     - community.crypto
   tasks:
-    - name: Debug playbook content
-        ansible.builtin.debug:
-          msg: "{{ lookup('file', 'ca_setup.yml') }}"
     - name: Install OpenSSL
       dnf:
         name: openssl
