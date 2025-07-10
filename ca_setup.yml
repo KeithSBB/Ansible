@@ -58,6 +58,9 @@
         crl_distribution_points:
           - full_name:  
               - "URI:http://certauthority.home.arpa/crl/ca.crl"
+        key_usage:
+         # - keyCertSign
+         # - cRLSign
         key_usage_critical: true
         mode: '0600'
         state: present
