@@ -1,6 +1,6 @@
 ---
 - name: Test node accessibility, SSH connectivity, and sudo privileges
-  hosts: servers
+  hosts: all
   gather_facts: false
   tasks:
     - name: Check if node is reachable
