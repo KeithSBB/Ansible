@@ -1,5 +1,5 @@
 - name: Distribute CA certificate to clients and servers
-  hosts: all
+  hosts: linux_clients
   become: yes
   vars_files:
     - vault.yml
