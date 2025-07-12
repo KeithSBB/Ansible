@@ -1,5 +1,3 @@
-er
----
 - name: Generate and sign server certificates with Cockpit compatibility
   hosts: ca_server:servers
   become: yes
