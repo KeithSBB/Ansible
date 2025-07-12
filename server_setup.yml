@@ -165,11 +165,22 @@
         state: file
       become: yes
 
+    - name: Install libselinux-python3
+      package:
+        name: libselinux-python3
+        state: present
+      become: yes
+    
     - name: Set SELinux context for chain file
-      sefile:
+      ansible.posix.selinux_fcontext:
         path: "{{ cert_path }}/server-chain.crt"
         setype: public_content_t
         state: file
+      when: ansible_selinux is defined and ansible_selinux.status == 'enabled'
+      become: yes
+    
+    - name: Apply SELinux context to chain file
+      command: restorecon -v "{{ cert_path }}/server-chain.crt"
       when: ansible_selinux is defined and ansible_selinux.status == 'enabled'
       become: yes
 
