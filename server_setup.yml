@@ -1,9 +1,7 @@
 er
 ---
 - name: Generate and sign server certificates with Cockpit compatibility
-  hosts: 
-    - ca_server
-    - servers
+  hosts: ca_server:servers
   become: yes
   collections:
     - community.crypto
