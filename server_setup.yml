@@ -113,28 +113,21 @@
         dest: "{{ ca_tmp_dir }}/server-{{ inventory_hostname }}.csr"
         flat: yes
 
-    - name: Sign CSR with CA on control node
-      x509_certificate:
-        path: "{{ ca_tmp_dir }}/server-{{ inventory_hostname }}.crt"
-        csr_path: "{{ ca_tmp_dir }}/server-{{ inventory_hostname }}.csr"
-        ownca_privatekey_path: /etc/pki/lan-ca/private/ca-key.pem
-        ownca_path: /etc/pki/lan-ca/certs/ca-cert.pem
-        provider: ownca
-        ownca_not_after: "+90d"
-        ownca_digest: sha256
-        key_usage:
-          - digitalSignature
-          - keyEncipherment
-        extended_key_usage:
-          - serverAuth
-        authority_information_access:
-          - caIssuers: "http://ca.home.arpa/certs/ca-cert.pem"
-        mode: '0644'
-        owner: root
-        group: root
-        state: present
-      delegate_to: localhost
-      become: yes
+      - name: Sign CSR with CA on control node
+        community.crypto.x509_certificate:
+          path: "{{ ca_tmp_dir }}/server-{{ inventory_hostname }}.crt"
+          csr_path: "{{ ca_tmp_dir }}/server-{{ inventory_hostname }}.csr"
+          ownca_privatekey_path: /etc/pki/lan-ca/private/ca-key.pem
+          ownca_path: /etc/pki/lan-ca/certs/ca-cert.pem
+          provider: ownca
+          ownca_not_after: "+90d"
+          ownca_digest: sha256
+          mode: '0644'
+          owner: root
+          group: root
+          state: present
+        delegate_to: localhost
+        become: yes
 
     - name: Remove existing certificate on target server
       file:
