@@ -99,7 +99,7 @@
         group: root
         state: present
       vars:
-        san_list: "{{ [ 'DNS:' + inventory_hostname, 'DNS:' + inventory_hostname + '.home.arpa', 'IP:' + ansible_host ] + (additional_hostnames | default([]) | map('regex_replace', '^(.*)$', 'DNS:\\1') | list) }}"
+        san_list: "{{ [ 'DNS:' + inventory_hostname, 'DNS:' + inventory_hostname + '.home.arpa', 'DNS:' + ansible_host ] + (additional_hostnames | default([]) | map('regex_replace', '^(.*)$', 'DNS:\\1') | list) }}"
 
     - name: Remove existing CSR on control node
       file:
