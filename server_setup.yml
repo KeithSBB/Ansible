@@ -171,7 +171,7 @@
         state: present
       become: yes
     
-     - name: Set SELinux context for chain file
+    - name: Set SELinux context for chain file
       community.general.sefcontext:
         target: "/path/to/chain/file(/.*)?"  # Adjust path; regex includes subfiles if needed
         setype: "httpd_sys_content_t"        # Adjust SELinux type as needed
