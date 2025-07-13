@@ -171,18 +171,18 @@
         state: present
       become: yes
     
-    - name: Set SELinux context for chain file
-      ansible.posix.selinux_fcontext:
-        path: "{{ cert_path }}/server-chain.crt"
-        setype: public_content_t
-        state: file
-      when: ansible_selinux is defined and ansible_selinux.status == 'enabled'
+     - name: Set SELinux context for chain file
+      community.general.sefcontext:
+        target: "/path/to/chain/file(/.*)?"  # Adjust path; regex includes subfiles if needed
+        setype: "httpd_sys_content_t"        # Adjust SELinux type as needed
+        state: present
       become: yes
+      register: selinux_fcontext_result
     
     - name: Apply SELinux context to chain file
-      command: restorecon -v "{{ cert_path }}/server-chain.crt"
-      when: ansible_selinux is defined and ansible_selinux.status == 'enabled'
+      ansible.builtin.command: restorecon -R -v "/path/to/chain/file"
       become: yes
+      when: selinux_fcontext_result.changed
 
     - name: Clean up CSR and certificate on control node
       file:
