@@ -92,6 +92,7 @@
         key_usage:
           - digitalSignature
           - keyEncipherment
+          - keyAgreement
         extended_key_usage:
           - serverAuth
         mode: '0600'
