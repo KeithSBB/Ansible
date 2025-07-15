@@ -207,6 +207,8 @@
         owner: root
         group: root
         remote_src: yes
+      become: yes
+      when: inventory_hostname in groups['ca_server']
 
     - name: Check if /etc/cockpit/ws-certs.d exists
       stat:
