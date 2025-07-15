@@ -1,6 +1,7 @@
 - name: Distribute CA certificate to clients and servers
   hosts: linux_clients
   become: yes
+  ignore_unreachable: yes
   vars_files:
     - vault.yml
   tasks:
