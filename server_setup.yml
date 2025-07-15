@@ -159,25 +159,30 @@
         state: file
       become: yes
 
-    - name: Install libselinux-python3
-      package:
-        name: libselinux-python3
-        state: present
-      become: yes
-    
+#  Not needed as SELinux tasks don't use this
+#    - name: Install libselinux-python3
+#      package:
+#        name: libselinux-python3
+#        state: present
+#      become: yes
+#      when: ansible_distribution == "Fedora"
+        
     - name: Set SELinux context for chain file
       community.general.sefcontext:
-        target: "/path/to/chain/file(/.*)?"  # Adjust path; regex includes subfiles if needed
-        setype: "httpd_sys_content_t"        # Adjust SELinux type as needed
+        target: "{{ cert_path }}/server-chain.crt"
+        setype: httpd_sys_content_t
         state: present
       become: yes
       register: selinux_fcontext_result
+      when: ansible_distribution == "Fedora"
     
     - name: Apply SELinux context to chain file
-      ansible.builtin.command: restorecon -R -v "/path/to/chain/file"
+      ansible.builtin.command: restorecon -R -v "{{ cert_path }}/server-chain.crt"
       become: yes
-      when: selinux_fcontext_result.changed
-
+      when: 
+        - selinux_fcontext_result.changed
+        - ansible_distribution == "Fedora"
+        
     - name: Clean up CSR and certificate on control node
       file:
         path: "{{ item }}"
