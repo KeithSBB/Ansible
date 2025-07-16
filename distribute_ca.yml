@@ -1,15 +1,15 @@
 - name: Distribute CA certificate to all hosts
-  hosts: all
+  hosts: fedora:debian:haos
   become: yes
   ignore_unreachable: true
   vars_files:
-    - "{{ 'vars/fedora.yml' if 'fedora' in group_names else 'vars/debian.yml' if 'debian' in group_names else 'vars/haos.yml' if 'haos' in group_names else '' }}"
+    - "{{ 'vars/fedora.yml' if 'fedora' in group_names else 'vars/debian.yml' if 'debian' in group_names else 'vars/haos.yml' }}"
   tasks:
     - name: Fail if ca_path is undefined
       ansible.builtin.fail:
         msg: "ca_path is undefined for host {{ inventory_hostname }}. Ensure it belongs to fedora, debian, or haos group."
       when: ca_path is not defined
-  
+
     - name: Copy CA certificate to hosts
       ansible.builtin.copy:
         src: /etc/pki/lan-ca/certs/ca-cert.pem
@@ -17,6 +17,8 @@
         owner: root
         group: root
         mode: '0644'
+        force: true
+      when: ca_path is defined
 
     - name: Update CA trust on Fedora
       ansible.builtin.command:
