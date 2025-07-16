@@ -32,7 +32,9 @@
     - name: Fail if ca_path is undefined
       ansible.builtin.fail:
         msg: "ca_path is undefined for host {{ inventory_hostname }}. Check OS detection (ansible_distribution={{ ansible_distribution | default('undefined') }}, ansible_os_family={{ ansible_os_family | default('undefined') }})."
-      when: ca_path is not defined
+      when:
+        - ca_path is not defined
+        - ansible_failed_result is not defined
 
     - name: Copy CA certificate to hosts
       ansible.builtin.copy:
@@ -42,7 +44,9 @@
         group: root
         mode: '0644'
         force: true
-      when: ca_path is defined
+      when:
+        - ca_path is defined
+        - ansible_failed_result is not defined
 
     - name: Update CA trust on Fedora
       ansible.builtin.command:
