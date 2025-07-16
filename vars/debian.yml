@@ -2,3 +2,4 @@ tls_path: /etc/ssl
 cert_path: /etc/ssl/certs
 key_path: /etc/ssl/private
 csr_path: /etc/ssl/csrs
+ca_path: /usr/local/share/ca-certificates/
