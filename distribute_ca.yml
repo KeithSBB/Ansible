@@ -11,11 +11,11 @@
 
     - name: Skip unreachable hosts
       ansible.builtin.meta: end_host
-      when: ping_result is failed or ping_result.unreachable | default(false)
+      when: ping_result.unreachable | default(false)
 
     - name: Gather facts for reachable hosts
       ansible.builtin.setup:
-        gather_subset: '!all,!min,distro'
+        gather_subset: '!all,!min,distribution'
       when: ping_result is succeeded
 
     - name: Include Fedora variables
