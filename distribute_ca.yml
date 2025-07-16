@@ -3,6 +3,10 @@
   become: yes
   ignore_unreachable: true
   tasks:
+    - name: Skip unreachable hosts
+      ansible.builtin.meta: end_host
+      when: ansible_failed_result is defined
+
     - name: Include Fedora variables
       ansible.builtin.include_vars:
         file: vars/fedora.yml
