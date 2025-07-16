@@ -21,7 +21,7 @@
       ansible.builtin.include_vars:
         file: vars/haos.yml
       when:
-        - ansible_distribution == "HassOS"
+        - ansible_distribution == "Alpine"
         - ansible_failed_result is not defined
 
     - name: Debug OS and variable assignment
