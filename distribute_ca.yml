@@ -1,4 +1,3 @@
----
 - name: Distribute CA certificate to all hosts
   hosts: ca_server:linux_clients:homeassistant:edgetpuserver
   become: yes
