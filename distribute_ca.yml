@@ -20,7 +20,7 @@
   
     - name: Copy CA certificate to hosts
       ansible.builtin.copy:
-        src: /etc/pki/tls/certs/ca-cert.pem
+        src: /etc/pki/lan-ca/certs/ca-cert.pem
         dest: "{{ ca_path }}/ca-cert.pem"
         owner: root
         group: root
