@@ -2,31 +2,36 @@
   hosts: ca_server:linux_clients:homeassistant:edgetpuserver
   become: yes
   ignore_unreachable: true
+  gather_facts: false
   tasks:
+    - name: Test host connectivity
+      ansible.builtin.ping:
+      register: ping_result
+      ignore_unreachable: true
+
     - name: Skip unreachable hosts
       ansible.builtin.meta: end_host
-      when: ansible_failed_result is defined
+      when: ping_result is failed or ping_result.unreachable | default(false)
+
+    - name: Gather facts for reachable hosts
+      ansible.builtin.setup:
+        gather_subset: '!all,!min,distro'
+      when: ping_result is succeeded
 
     - name: Include Fedora variables
       ansible.builtin.include_vars:
         file: vars/fedora.yml
-      when:
-        - ansible_distribution == "Fedora"
-        - ansible_failed_result is not defined
+      when: ansible_distribution == "Fedora"
 
     - name: Include Debian variables
       ansible.builtin.include_vars:
         file: vars/debian.yml
-      when:
-        - ansible_os_family == "Debian"
-        - ansible_failed_result is not defined
+      when: ansible_os_family == "Debian"
 
     - name: Include Home Assistant variables
       ansible.builtin.include_vars:
         file: vars/haos.yml
-      when:
-        - ansible_distribution == "Alpine"
-        - ansible_failed_result is not defined
+      when: ansible_distribution == "Alpine"
 
     - name: Debug OS and variable assignment
       ansible.builtin.debug:
@@ -35,10 +40,8 @@
 
     - name: Fail if ca_path is undefined
       ansible.builtin.fail:
-        msg: "ca_path is undefined for host {{ inventory_hostname }}. Check OS detection (ansible_distribution={{ ansible_distribution | default('undefined') }}, ansible_os_family={{ ansible_os_family | default('undefined') }})."
-      when:
-        - ca_path is not defined
-        - ansible_failed_result is not defined
+        msg: "ca_path is undefined for host {{ inventory_hostname }}. Check OS distribution (ansible_distribution={{ ansible_distribution | default('undefined') }}, ansible_os_family={{ ansible_os_family | default('undefined') }})."
+      when: ca_path is not defined
 
     - name: Copy CA certificate to hosts
       ansible.builtin.copy:
@@ -48,22 +51,16 @@
         group: root
         mode: '0644'
         force: true
-      when:
-        - ca_path is defined
-        - ansible_failed_result is not defined
+      when: ca_path is defined
 
     - name: Update CA trust on Fedora
       ansible.builtin.command:
         cmd: update-ca-trust
       changed_when: true
-      when:
-        - ansible_distribution == "Fedora"
-        - ansible_failed_result is not defined
+      when: ansible_distribution == "Fedora"
 
     - name: Update CA certificates on Debian
       ansible.builtin.command:
         cmd: update-ca-certificates
       changed_when: true
-      when:
-        - ansible_os_family == "Debian"
-        - ansible_failed_result is not defined
+      when: ansible_os_family == "Debian"
