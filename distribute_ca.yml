@@ -7,26 +7,32 @@
     - name: Include Fedora variables
       ansible.builtin.include_vars:
         file: vars/fedora.yml
-      when: ansible_distribution == "Fedora"
+      when:
+        - ansible_distribution == "Fedora"
+        - ansible_failed_result is not defined
 
     - name: Include Debian variables
       ansible.builtin.include_vars:
         file: vars/debian.yml
-      when: ansible_os_family == "Debian"
+      when:
+        - ansible_os_family == "Debian"
+        - ansible_failed_result is not defined
 
     - name: Include Home Assistant variables
       ansible.builtin.include_vars:
         file: vars/haos.yml
-      when: ansible_distribution == "Alpine"
+      when:
+        - ansible_distribution == "HassOS"
+        - ansible_failed_result is not defined
 
     - name: Debug OS and variable assignment
       ansible.builtin.debug:
-        msg: "Host {{ inventory_hostname }}: ansible_distribution={{ ansible_distribution }}, ansible_os_family={{ ansible_os_family }}, ca_path={{ ca_path | default('undefined') }}"
+        msg: "Host {{ inventory_hostname }}: ansible_distribution={{ ansible_distribution | default('undefined') }}, ansible_os_family={{ ansible_os_family | default('undefined') }}, ca_path={{ ca_path | default('undefined') }}"
       run_once: true
 
     - name: Fail if ca_path is undefined
       ansible.builtin.fail:
-        msg: "ca_path is undefined for host {{ inventory_hostname }}. Check OS detection (ansible_distribution={{ ansible_distribution }}, ansible_os_family={{ ansible_os_family }})."
+        msg: "ca_path is undefined for host {{ inventory_hostname }}. Check OS detection (ansible_distribution={{ ansible_distribution | default('undefined') }}, ansible_os_family={{ ansible_os_family | default('undefined') }})."
       when: ca_path is not defined
 
     - name: Copy CA certificate to hosts
@@ -43,10 +49,14 @@
       ansible.builtin.command:
         cmd: update-ca-trust
       changed_when: true
-      when: ansible_distribution == "Fedora"
+      when:
+        - ansible_distribution == "Fedora"
+        - ansible_failed_result is not defined
 
     - name: Update CA certificates on Debian
       ansible.builtin.command:
         cmd: update-ca-certificates
       changed_when: true
-      when: ansible_os_family == "Debian"
+      when:
+        - ansible_os_family == "Debian"
+        - ansible_failed_result is not defined
