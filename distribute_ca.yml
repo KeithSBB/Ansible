@@ -1,22 +1,14 @@
 - name: Distribute CA certificate to all hosts
   hosts: all
   become: yes
+  ignore_unreachable: true
+  vars_files:
+    - "{{ 'vars/fedora.yml' if 'fedora' in group_names else 'vars/debian.yml' if 'debian' in group_names else 'vars/haos.yml' if 'haos' in group_names else '' }}"
   tasks:
-    - name: Include Fedora variables
-      include_vars:
-        file: vars/fedora.yml
-      when: ansible_distribution == "Fedora"
-
-    - name: Include Debian variables
-      include_vars:
-        file: vars/debian.yml
-      when: ansible_os_family == "Debian"
-
-    - name: Include Home Assistant variable
-      include_vars:
-        file: vars/haos.yml
-      when: ansible_distribution == "Alpine"
-
+    - name: Fail if ca_path is undefined
+      ansible.builtin.fail:
+        msg: "ca_path is undefined for host {{ inventory_hostname }}. Ensure it belongs to fedora, debian, or haos group."
+      when: ca_path is not defined
   
     - name: Copy CA certificate to hosts
       ansible.builtin.copy:
