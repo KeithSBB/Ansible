@@ -2,6 +2,22 @@
   hosts: all
   become: yes
   tasks:
+    - name: Include Fedora variables
+      include_vars:
+        file: vars/fedora.yml
+      when: ansible_distribution == "Fedora"
+
+    - name: Include Debian variables
+      include_vars:
+        file: vars/debian.yml
+      when: ansible_os_family == "Debian"
+
+    - name: Include Home Assistant variable
+      include_vars:
+        file: vars/haos.yml
+      when: ansible_distribution == "Alpine"
+
+  
     - name: Copy CA certificate to hosts
       ansible.builtin.copy:
         src: /etc/pki/tls/certs/CA_cert.pem
