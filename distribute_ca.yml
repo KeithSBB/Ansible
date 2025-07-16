@@ -1,13 +1,32 @@
+---
 - name: Distribute CA certificate to all hosts
-  hosts: fedora:debian:haos
+  hosts: ca_server:linux_clients:homeassistant:edgetpuserver
   become: yes
   ignore_unreachable: true
-  vars_files:
-    - "{{ 'vars/fedora.yml' if 'fedora' in group_names else 'vars/debian.yml' if 'debian' in group_names else 'vars/haos.yml' }}"
   tasks:
+    - name: Include Fedora variables
+      ansible.builtin.include_vars:
+        file: vars/fedora.yml
+      when: ansible_distribution == "Fedora"
+
+    - name: Include Debian variables
+      ansible.builtin.include_vars:
+        file: vars/debian.yml
+      when: ansible_os_family == "Debian"
+
+    - name: Include Home Assistant variables
+      ansible.builtin.include_vars:
+        file: vars/haos.yml
+      when: ansible_distribution == "Alpine"
+
+    - name: Debug OS and variable assignment
+      ansible.builtin.debug:
+        msg: "Host {{ inventory_hostname }}: ansible_distribution={{ ansible_distribution }}, ansible_os_family={{ ansible_os_family }}, ca_path={{ ca_path | default('undefined') }}"
+      run_once: true
+
     - name: Fail if ca_path is undefined
       ansible.builtin.fail:
-        msg: "ca_path is undefined for host {{ inventory_hostname }}. Ensure it belongs to fedora, debian, or haos group."
+        msg: "ca_path is undefined for host {{ inventory_hostname }}. Check OS detection (ansible_distribution={{ ansible_distribution }}, ansible_os_family={{ ansible_os_family }})."
       when: ca_path is not defined
 
     - name: Copy CA certificate to hosts
@@ -24,10 +43,10 @@
       ansible.builtin.command:
         cmd: update-ca-trust
       changed_when: true
-      when: "'fedora' in group_names"
+      when: ansible_distribution == "Fedora"
 
     - name: Update CA certificates on Debian
       ansible.builtin.command:
         cmd: update-ca-certificates
       changed_when: true
-      when: "'debian' in group_names"
+      when: ansible_os_family == "Debian"
