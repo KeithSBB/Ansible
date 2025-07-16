@@ -1,17 +1,23 @@
-- name: Distribute CA certificate to clients and servers
-  hosts: linux_clients
+- name: Distribute CA certificate to all hosts
+  hosts: all
   become: yes
-  ignore_unreachable: yes
-  vars_files:
-    - vault.yml
   tasks:
-    - name: Copy CA certificate to target machines
-      copy:
-        src: /etc/pki/lan-ca/certs/ca-cert.pem
-        dest: /etc/pki/ca-trust/source/anchors/lan-ca-cert.pem
+    - name: Copy CA certificate to hosts
+      ansible.builtin.copy:
+        src: /etc/pki/tls/certs/CA_cert.pem
+        dest: "{{ ca_path }}/CA_cert.pem"
         owner: root
         group: root
         mode: '0644'
-    - name: Update CA trust store
-      command: update-ca-trust
-      when: ansible_os_family == 'RedHat'
+
+    - name: Update CA trust on Fedora
+      ansible.builtin.command:
+        cmd: update-ca-trust
+      changed_when: true
+      when: "'fedora' in group_names"
+
+    - name: Update CA certificates on Debian
+      ansible.builtin.command:
+        cmd: update-ca-certificates
+      changed_when: true
+      when: "'debian' in group_names"
