@@ -1,3 +1,4 @@
+# Note: run distribute_ca.yml first as ca_cert.pem is required on target hosts
 - name: Generate and sign server certificates with Cockpit compatibility
   hosts: ca_server:servers
   become: yes
