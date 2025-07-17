@@ -147,7 +147,7 @@
 
     - name: Create certificate chain file
       shell: |
-        cat {{ cert_path }}/server.crt /etc/pki/lan-ca/certs/ca-cert.pem > {{ cert_path }}/server-chain.crt
+        cat {{ cert_path }}/server.crt {{ ca_path }}/ca-cert.pem > {{ cert_path }}/server-chain.crt
       args:
         creates: "{{ cert_path }}/server-chain.crt"
       become: yes
